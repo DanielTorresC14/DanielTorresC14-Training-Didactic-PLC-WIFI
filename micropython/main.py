@@ -83,8 +83,10 @@ if __name__ == "__main__":
             s.close()
             print('Socket cerrado, esperando 5 segundos para reconectar...')
             utime.sleep(5)
-        
-        except Exception as e:
-            print(f'No se pudo conectar: {e}. Reintentando en 5 segundos...')
-            utime.sleep(5)
-
+        except (ConnectionRefusedError, ConnectionResetError, socket.timeout) as e:
+            print(f"Error de conexión: {e}")
+            utime.sleep(1)
+        except:
+            print('Un error grave ocurrió. Terminando programa.')
+            s.close()
+            break
