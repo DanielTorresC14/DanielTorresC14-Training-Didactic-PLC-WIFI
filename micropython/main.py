@@ -1,10 +1,12 @@
 import usocket as socket
 import json
+import utime
+import re
+
 
 from connect_esp_wifi import connect_wifi
 from machine import Pin
 
-connect_wifi('ITZACATEPEC', '')
 
 # Configuración inicial de pines (OUTPUT)
 button_pins = {
@@ -31,6 +33,7 @@ button_states = {
     'emergency': 0,
     'selector': 0  # 0, 1 o 2
 }
+connect_wifi('Metallica', 'enter sandman')
 
 def update_pins():
     """Actualiza los pines físicos en < 0.1ms basado en button_states"""
@@ -47,30 +50,41 @@ def update_pins():
     button_pins['selector2'].value(1 if selector_pos == 2 else 0)
 
 # Ejemplo de uso:
-if __name__ == "__main__":
-    
-    HOST = '10.177.127.195'  # La dirección del servidor remoto
-    PORT = 5007         # El mismo puerto usado por el servidor
 
-    # Crear un socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        # Conectar al servidor
-        s.connect((HOST, PORT))
-        print(f'Conectado a {HOST}:{PORT}')
-        
-        # Bucle principal para recibir datos
-        while True:
-            try:
-                data = s.recv(1024)
-                if not data:
-                    continue
-                print(data.decode())
-                # Cambios desde la web
-                button_states.update(json.loads((data.decode())))
-                update_pins()
-            except:
-                pass
+if __name__ == "__main__":
+    HOST = '192.168.0.16'
+    PORT = 5007
+    
+    while True:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            print(f'Intentando conectar a {HOST}:{PORT}...')
+            s.connect((HOST, PORT))
+            print(f'Conectado a {HOST}:{PORT}')
             
-    except Exception as e:
-        print(f'Error: {e}')
+            while True:
+                try:
+                    data = s.recv(1024)
+                    if not data:
+                        # Si no llega data, puede que se perdió conexión
+                        continue
+                    for line in data.decode().split('\n'):
+                        if not line.strip():
+                            continue
+                        try:
+                            obj = json.loads(line.strip())
+                            button_states.update(obj)
+                            update_pins()
+                        except Exception as e:
+                            print("Error JSON:", e, "en:", line)
+                except Exception as e:
+                    print(f"Error en recepción: {e}. Reconectando...")
+                    break
+            s.close()
+            print('Socket cerrado, esperando 5 segundos para reconectar...')
+            utime.sleep(5)
+        
+        except Exception as e:
+            print(f'No se pudo conectar: {e}. Reintentando en 5 segundos...')
+            utime.sleep(5)
+

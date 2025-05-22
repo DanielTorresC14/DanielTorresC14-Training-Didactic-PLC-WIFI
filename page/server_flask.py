@@ -1,14 +1,52 @@
 import json
 import threading
+import qrcode
 from flask import Flask, request, jsonify, render_template, send_from_directory
 import socket
-import os
+from pyngrok import ngrok, conf
+
+from rich import print
+from rich.logging import RichHandler
+import logging
+
+# Configura el logging con RichHandler
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler()]
+)
+
+conf.get_default().auth_token = "2xQprcnt5tRC67VvfEBolGOoOH3_3Vo2CpgnoMfD6K3raazd4"
 
 HOST = ''
 PORT = 5007
 conn = None
 
 app = Flask(__name__, static_folder='static')
+
+
+def generar_qr (data:str, path:str) -> None:
+    # Datos que deseas codifica
+
+    # Crear el objeto QR
+    qr = qrcode.QRCode(
+        version=1,  # controla el tamaño del QR (1 es el más pequeño)
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,  # tamaño de cada caja del código QR
+        border=4,  # grosor del borde
+    )
+
+    # Añadir los datos
+    qr.add_data(data)
+    qr.make(fit=True)
+
+    # Crear la imagen
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    # Guardar la imagen
+    img.save(path)
+
 
 @app.route('/')
 def index():
@@ -45,7 +83,7 @@ def send_to_esp32(id, value):
     """Función para enviar datos a la ESP32"""
     print(f"Enviando a ESP32: id {id} = {value}")
     # Aquí implementarás la comunicación real con la ESP32
-    esp32_connection.sendall(json.dumps({id:value}).encode())
+    esp32_connection.sendall((json.dumps({id:value}) + '\n').encode())
 
 
 def connectESP32():
@@ -76,6 +114,19 @@ def connectESP32():
             print("Conexión cerrada, esperando nueva conexión...")
             esp32_connection = None
 
+def obtener_ip_local():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # No necesita conectarse realmente
+        s.connect(("8.8.8.8", 80))
+        ip_local = s.getsockname()[0]
+        print(f'IP LOCAL: {ip_local}')
+    except Exception:
+        ip_local = "127.0.0.1"
+    finally:
+        s.close()
+    return ip_local
+
 
 if __name__ == '__main__':
     try:
@@ -92,4 +143,8 @@ if __name__ == '__main__':
     
     # Iniciar la aplicación Flask
     print("Iniciando servidor web Flask...")
-    app.run(host='0.0.0.0', port=80, debug=True, use_reloader=False)
+    public_url = ngrok.connect(5000)
+    print(f" * URL pública: {public_url}")
+    generar_qr(public_url.__str__().split('"')[1], 'pagina_publica.png')
+    generar_qr(f'http://{obtener_ip_local()}:5000', 'pagina_local.png')
+    app.run(host='localhost', port=5000, debug=True, use_reloader=False)
