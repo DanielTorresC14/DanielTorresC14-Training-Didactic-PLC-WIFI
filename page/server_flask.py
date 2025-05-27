@@ -20,7 +20,7 @@ logging.basicConfig(
 conf.get_default().auth_token = "2xQprcnt5tRC67VvfEBolGOoOH3_3Vo2CpgnoMfD6K3raazd4"
 
 HOST = ''
-PORT = 5007
+PORT = 5000
 conn = None
 
 app = Flask(__name__, static_folder='static')
@@ -129,13 +129,13 @@ def obtener_ip_local():
 
 
 if __name__ == '__main__':
-    try:
-        with open('templates/index.html', 'w') as f:
-            with open('static/index.html', 'r') as source:
-                f.write(source.read())
-        print("Archivo HTML copiado correctamente")
-    except Exception as e:
-        print(f"Error al copiar el archivo HTML: {e}")
+    #try:
+    #    with open('templates/index.html', 'w') as f:
+    #        with open('static/index.html', 'r') as source:
+    #            f.write(source.read())
+    #    print("Archivo HTML copiado correctamente")
+    #except Exception as e:
+    #    print(f"Error al copiar el archivo HTML: {e}")
 
     # Iniciar el servidor de socket en un hilo separado.
     socket_thread = threading.Thread(target=connectESP32, daemon=True)
@@ -143,8 +143,8 @@ if __name__ == '__main__':
     
     # Iniciar la aplicación Flask
     print("Iniciando servidor web Flask...")
-    public_url = ngrok.connect(5000)
-    print(f" * URL pública: {public_url}")
-    generar_qr(public_url.__str__().split('"')[1], 'pagina_publica.png')
+    #public_url = ngrok.connect(5000)
+    #print(f" * URL pública: {public_url}")
+    #generar_qr(public_url.__str__().split('"')[1], 'pagina_publica.png')
     generar_qr(f'http://{obtener_ip_local()}:5000', 'pagina_local.png')
-    app.run(host='localhost', port=5000, debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
